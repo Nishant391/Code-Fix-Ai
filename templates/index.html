@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#080d19">
+  <title>CodeFix AI — Debug Smarter</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=2">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#"><span class="brand-icon">⌘</span><span>CodeFix <b>AI</b><small>Find. Fix. Learn. Code Better.</small></span></a>
+    <nav><a href="#workspace">Debugger</a><a href="#how-it-works">How it works</a></nav>
+    <div class="topbar-actions">
+      <button class="button button-small button-outline" id="aiSettingsBtn">
+        <span class="status-dot-sm" id="topbarAiDot"></span>
+        <span id="topbarAiText">Offline Mode</span>
+      </button>
+      <button class="button button-small" id="tryExample">Try example <span>↗</span></button>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="eyebrow"><span class="pulse"></span> YOUR PERSONAL DEBUGGING ASSISTANT</div>
+      <h1>Code smarter.<br><span>Fix bugs faster.</span></h1>
+      <p>Paste your code, detect mistakes, understand the problem, and get clean, corrected code.</p>
+      <div class="hero-pills">
+        <span>⌁ Smart Error Detection</span>
+        <span>✧ Gemini / OpenAI / Groq / Local</span>
+        <span>⌘ Detailed Explanations</span>
+      </div>
+    </section>
+
+    <section id="workspace" class="workspace">
+      <!-- Editor Panel -->
+      <div class="panel editor-panel">
+        <div class="panel-heading">
+          <div><span class="heading-icon blue">⌘</span><div><h2>Your code</h2><p>Paste the code you want to debug</p></div></div>
+          <button class="text-button" id="clearCode">Clear</button>
+        </div>
+        <div class="editor-toolbar">
+          <label for="language">Language</label>
+          <select id="language">
+            <option>Python</option>
+            <option>JavaScript</option>
+            <option>Java</option>
+            <option>C++</option>
+            <option>C</option>
+          </select>
+          <span class="editor-hint" id="activeModeHint">● Offline Rules Active</span>
+        </div>
+        <div class="code-wrap">
+          <div class="line-numbers" id="lineNumbers">1</div>
+          <textarea id="codeInput" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Code editor" placeholder="Paste your code here..."></textarea>
+        </div>
+        <div class="editor-footer">
+          <span id="charCount">0 characters</span>
+          <span>Tip: Press Ctrl+Enter to fix instantly</span>
+        </div>
+        <div class="actions">
+          <button class="button button-primary" id="fixButton"><span>✦</span> Fix my code</button>
+          <button class="button button-secondary" id="explainButton">◉ Explain only</button>
+        </div>
+        <div class="privacy-note">
+          <span>ⓘ</span> <span id="privacyDesc">Running in smart offline mode. Click "AI Settings" above to enable deep AI debugging.</span>
+        </div>
+      </div>
+
+      <!-- Results Panel -->
+      <div class="panel results-panel">
+        <div class="tabs">
+          <button class="tab active" data-tab="fixed">✓ Fixed code</button>
+          <button class="tab" data-tab="explanation">✧ Explanation</button>
+          <button class="tab" data-tab="analysis">⚠ Error analysis</button>
+        </div>
+        <div class="result-content">
+          <!-- Tab 1: Fixed Code -->
+          <div class="result-view active" id="view-fixed">
+            <div class="result-title">
+              <div>
+                <span class="status-dot green" id="fixedStatusDot"></span>
+                <h3 id="fixedTitle">Suggested solution</h3>
+              </div>
+              <div class="result-title-right">
+                <span class="fix-badge" id="fixBadge" style="display:none">Fixed</span>
+                <button class="copy-button" id="copyCode">Copy code</button>
+              </div>
+            </div>
+
+            <!-- Banner shown if offline engine could not fix the error -->
+            <div class="unfixed-banner" id="unfixedBanner" style="display:none">
+              <div class="unfixed-banner-icon">⚠</div>
+              <div class="unfixed-banner-body">
+                <h4 id="unfixedHeading">No offline auto-fix available</h4>
+                <p id="unfixedMessage">The code contains errors, but heuristic rules could not automatically rewrite it. Connect a free AI provider in Settings for complete debugging.</p>
+                <button class="button button-small button-outline-glow" id="bannerSettingsBtn">⚙ Configure AI Provider</button>
+              </div>
+            </div>
+
+            <pre class="output-code" id="outputCodeWrap"><code id="fixedCode">Your corrected code will appear here.</code></pre>
+            <div class="empty-tip" id="fixedPlaceholder">
+              <span>✧</span>
+              <b>Ready when you are</b>
+              <p>Paste code on the left and select <strong>Fix my code</strong>.</p>
+            </div>
+          </div>
+
+          <!-- Tab 2: Explanation -->
+          <div class="result-view" id="view-explanation">
+            <div class="result-title"><div><span class="status-dot purple"></span><h3>What went wrong?</h3></div></div>
+            <div id="explanationText" class="explanation-box muted">Your error explanation will appear here.</div>
+            <div id="changesList" class="changes-list"></div>
+          </div>
+
+          <!-- Tab 3: Error Analysis -->
+          <div class="result-view" id="view-analysis">
+            <div class="result-title"><div><span class="status-dot red"></span><h3>Error details</h3></div></div>
+            <div class="error-card">
+              <div class="error-label">DIAGNOSIS</div>
+              <h3 id="errorType">No analysis yet</h3>
+              <p id="errorMessage">Run a debug check to inspect your code.</p>
+              <div class="error-line" id="errorLine">Line: —</div>
+            </div>
+            <div class="notice-card">
+              <b>Important</b>
+              <p id="resultNotes">AI and heuristic suggestions can be imperfect. Review and test any changes before using them in a real project.</p>
+            </div>
+          </div>
+
+          <div class="result-bottom">
+            <span id="resultStatus"><span class="status-dot"></span> Waiting for code</span>
+            <span id="resultLanguage">Python</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- How it works -->
+    <section class="how" id="how-it-works">
+      <div class="section-label">SIMPLE WORKFLOW</div>
+      <h2>From confusing error to clear fix.</h2>
+      <div class="steps">
+        <article><div class="step-icon">01</div><h3>Paste your code</h3><p>Start with the code that isn't working or throws syntax and logic errors.</p></article>
+        <article><div class="step-icon">02</div><h3>Analyze the problem</h3><p>Get line-by-line diagnosis, plain-language explanations, and proposed fixes.</p></article>
+        <article><div class="step-icon">03</div><h3>Learn and improve</h3><p>Compare the suggested code, copy it, and test it in your own environment.</p></article>
+      </div>
+    </section>
+  </main>
+
+  <!-- AI Settings Modal -->
+  <div class="modal-backdrop" id="aiModalBackdrop" style="display:none">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <span class="heading-icon blue">⚙</span>
+          <div>
+            <h3>AI Provider Settings</h3>
+            <p>Connect an AI API for deep multi-language fixes or use smart offline rules</p>
+          </div>
+        </div>
+        <button class="modal-close" id="closeAiModal">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="providerSelect">AI Provider</label>
+          <select id="providerSelect">
+            <option value="none">Offline Heuristic Mode (Free, No Key Needed)</option>
+            <option value="gemini">Google Gemini (Free tier available - Recommended)</option>
+            <option value="groq">Groq (Free & Ultra-Fast Llama 3.3)</option>
+            <option value="openai">OpenAI (GPT-4o-mini / GPT-4o)</option>
+            <option value="ollama">Ollama (100% Free & Local, no internet)</option>
+            <option value="custom">Custom OpenAI-Compatible API</option>
+          </select>
+          <small class="form-hint" id="providerHint">Works without any API key for common syntax errors.</small>
+        </div>
+
+        <div class="form-group" id="apiKeyField" style="display:none">
+          <div class="label-row">
+            <label for="apiKeyInput">API Key</label>
+            <a href="#" target="_blank" rel="noopener" id="getKeyLink" class="free-key-link">Get Free Key ↗</a>
+          </div>
+          <div class="input-with-action">
+            <input type="password" id="apiKeyInput" placeholder="Paste your API key here...">
+            <button type="button" class="btn-toggle-vis" id="toggleApiKeyVis">👁</button>
+          </div>
+          <small class="form-hint">Stored safely in your local browser only. Never shared or published.</small>
+        </div>
+
+        <div class="form-group" id="modelField" style="display:none">
+          <label for="modelInput">Model Name</label>
+          <input type="text" id="modelInput" placeholder="e.g. gemini-1.5-flash">
+          <small class="form-hint">Model identifier (e.g. <code>gemini-1.5-flash</code> without "models/").</small>
+        </div>
+
+        <div class="form-group" id="baseUrlField" style="display:none">
+          <label for="baseUrlInput">Base URL</label>
+          <input type="text" id="baseUrlInput" placeholder="https://api.openai.com/v1/chat/completions">
+          <small class="form-hint">OpenAI-compatible chat completions endpoint.</small>
+        </div>
+
+        <div class="test-feedback" id="testFeedback" style="display:none"></div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="button button-small button-secondary" id="testConnectionBtn" style="display:none">Test Connection</button>
+        <button class="button button-small button-primary" id="saveAiConfigBtn">Save & Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <a class="brand footer-brand" href="#"><span class="brand-icon">⌘</span><span>CodeFix <b>AI</b></span></a>
+    <span>Built to help you learn, not just patch bugs.</span>
+  </footer>
+
+  <div class="toast" id="toast" role="status"></div>
+  <script src="{{ url_for('static', filename='app.js') }}?v=6"></script>
+</body>
+</html>
